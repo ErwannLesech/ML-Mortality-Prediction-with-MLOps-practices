@@ -1,0 +1,59 @@
+{
+  "model_info": {
+    "name": "SVM",
+    "filename": "SVM_20250918_184132_0973.pkl",
+    "algorithm": "SVC"
+  },
+  "training_info": {
+    "timestamp": "2025-09-18T18:41:34.510950",
+    "data_file": "data/processed/clinical_processed_20250918.csv",
+    "train_size": 8000,
+    "test_size": 2000,
+    "features_count": 14,
+    "target_distribution": {
+      "0": 9727,
+      "1": 273
+    }
+  },
+  "hyperparameters": {
+    "kernel": "rbf",
+    "C": 1.0,
+    "probability": true,
+    "random_state": 42
+  },
+  "performance": {
+    "accuracy": 0.9725,
+    "f1_score": 0.0,
+    "roc_auc": 0.494,
+    "training_time_seconds": 0.77,
+    "final_train_loss": 0.1251,
+    "final_val_loss": 0.1259
+  },
+  "training_history": {
+    "epochs": [
+      1
+    ],
+    "train_loss": [
+      0.12505898845867058
+    ],
+    "val_loss": [
+      0.12594815902286507
+    ]
+  },
+  "feature_names": [
+    "patient_id",
+    "age",
+    "sex",
+    "bmi",
+    "systolic_bp",
+    "diastolic_bp",
+    "glucose",
+    "cholesterol",
+    "creatinine",
+    "diabetes",
+    "hypertension",
+    "diagnosis",
+    "readmission_30d",
+    "age_group"
+  ]
+}

@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # Service principal API
+  ml-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-mortality-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - FLASK_ENV=production
+      - API_PORT=5000
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - mlops-network
+
+  # Service de pipeline (pour l'entraînement périodique)
+  ml-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-mortality-pipeline
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+    command: python3 pipeline.py --skip-download
+    profiles:
+      - pipeline  # Service optionnel, lancé avec --profile pipeline
+    networks:
+      - mlops-network
+    depends_on:
+      - ml-api
+
+  # Service de tests (pour CI/CD)
+  ml-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-mortality-tests
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./tests:/app/tests
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+    command: ./run_tests.sh
+    profiles:
+      - test  # Service optionnel pour les tests
+    networks:
+      - mlops-network
+
+  # Service Nginx (optionnel pour la production)
+  nginx:
+    image: nginx:alpine
+    container_name: ml-mortality-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - ml-api
+    profiles:
+      - production  # Seulement en production
+    networks:
+      - mlops-network
+
+networks:
+  mlops-network:
+    driver: bridge
+    name: mlops-mortality-network
+
+volumes:
+  ml-data:
+    name: ml-mortality-data
+  ml-models:
+    name: ml-mortality-models

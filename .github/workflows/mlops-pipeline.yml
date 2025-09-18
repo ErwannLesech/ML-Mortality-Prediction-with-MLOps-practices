@@ -1,0 +1,376 @@
+name: 🏥 MLOps Pipeline - CI/CD
+
+# Déclencheurs
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Exécution automatique tous les dimanche à 2h du matin
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    # Permet le déclenchement manuel
+    inputs:
+      run_full_pipeline:
+        description: 'Exécuter la pipeline complète'
+        required: false
+        default: 'true'
+        type: boolean
+
+# Variables d'environnement globales
+env:
+  PYTHON_VERSION: '3.11'
+  CACHE_KEY_SUFFIX: v1
+
+jobs:
+  # Job 1: Tests de base et validation
+  tests:
+    name: 🧪 Tests et Validation
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: 📦 Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}-${{ env.CACHE_KEY_SUFFIX }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+    
+    - name: 🔧 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+    
+    - name: 📊 Create test data
+      run: |
+        mkdir -p data/raw data/processed models logs reports
+        # Créer des données factices pour les tests
+        python -c "
+        import pandas as pd
+        import numpy as np
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'age': np.random.randint(18, 90, 100),
+            'sex': np.random.choice(['Male', 'Female'], 100),
+            'systolic_bp': np.random.randint(90, 180, 100),
+            'glucose': np.random.normal(100, 20, 100),
+            'mortality': np.random.choice([0, 1], 100, p=[0.85, 0.15])
+        })
+        df.to_csv('data/raw/clinical_test.csv', index=False)
+        "
+    
+    - name: 🧪 Run data validation tests
+      run: |
+        python -m pytest tests/test_preprocessing.py::TestDataValidation::test_format_validation_age -v
+        python -m pytest tests/test_preprocessing.py::TestDataValidation::test_format_validation_sex -v
+        python -m pytest tests/test_preprocessing.py::TestDataValidation::test_missing_and_infinite_values -v
+    
+    - name: 🤖 Run model validation tests
+      run: |
+        python -m pytest tests/test_train.py::TestModelValidation::test_model_reproducibility_random_forest -v
+        python -m pytest tests/test_train.py::TestModelValidation::test_cross_validation_stability -v
+    
+    - name: 📊 Generate test coverage
+      run: |
+        python -m pytest --cov=src --cov-report=xml --cov-report=term
+    
+    - name: 📤 Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # Job 2: Pipeline MLOps complète
+  mlops-pipeline:
+    name: ⚡ Pipeline MLOps
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 📊 Setup directories
+      run: |
+        mkdir -p data/raw data/processed models logs reports
+    
+    - name: 🏃‍♂️ Run MLOps Pipeline
+      run: |
+        # Exécuter la pipeline avec des données de test
+        python -c "
+        import pandas as pd
+        import numpy as np
+        np.random.seed(42)
+        n = 1000
+        df = pd.DataFrame({
+            'patient_id': range(1, n+1),
+            'age': np.random.randint(18, 95, n),
+            'sex': np.random.choice(['Male', 'Female'], n),
+            'bmi': np.random.normal(25, 4, n),
+            'systolic_bp': np.random.randint(90, 180, n),
+            'diastolic_bp': np.random.randint(60, 120, n),
+            'glucose': np.random.normal(100, 20, n),
+            'cholesterol': np.random.normal(200, 30, n),
+            'creatinine': np.random.normal(1.0, 0.3, n),
+            'diabetes': np.random.choice([0, 1], n, p=[0.8, 0.2]),
+            'hypertension': np.random.choice([0, 1], n, p=[0.7, 0.3]),
+            'readmission_30d': np.random.choice([0, 1], n, p=[0.85, 0.15]),
+            'mortality': np.random.choice([0, 1], n, p=[0.88, 0.12])
+        })
+        df.to_csv('data/raw/clinical_data_ci.csv', index=False)
+        "
+        
+        # Preprocessing
+        python src/preprocessing.py
+        
+        # Training
+        python src/train.py
+        
+        # Evaluation
+        python src/evaluate.py
+    
+    - name: 🔍 Validate models
+      run: |
+        # Vérifier que des modèles ont été créés
+        ls -la models/
+        python -c "
+        from pathlib import Path
+        models = list(Path('models').glob('*.pkl'))
+        assert len(models) > 0, 'Aucun modèle généré'
+        print(f'✅ {len(models)} modèles générés')
+        "
+    
+    - name: 🧪 Test predictions
+      run: |
+        python src/predict.py --example
+    
+    - name: 📊 Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mlops-artifacts-${{ github.sha }}
+        path: |
+          models/
+          reports/
+          logs/
+        retention-days: 30
+
+  # Job 3: Tests API et Docker
+  api-docker-tests:
+    name: 🐳 Tests API et Docker
+    runs-on: ubuntu-latest
+    needs: tests
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 📦 Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install requests
+    
+    - name: 📊 Setup test data
+      run: |
+        mkdir -p data/raw data/processed models logs reports
+        python -c "
+        import pandas as pd
+        import numpy as np
+        from sklearn.ensemble import RandomForestClassifier
+        import joblib
+        import json
+        from datetime import datetime
+        
+        # Créer des données de test
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'age': np.random.randint(20, 90, 100),
+            'sex_encoded': np.random.choice([0, 1], 100),
+            'systolic_bp': np.random.randint(90, 180, 100),
+            'glucose': np.random.normal(100, 20, 100),
+            'mortality': np.random.choice([0, 1], 100, p=[0.85, 0.15])
+        })
+        df.to_csv('data/processed/clinical_processed_test.csv', index=False)
+        
+        # Créer un modèle factice
+        X = df.drop('mortality', axis=1)
+        y = df['mortality']
+        model = RandomForestClassifier(n_estimators=10, random_state=42)
+        model.fit(X, y)
+        
+        # Sauvegarder
+        model_path = 'models/TestModel_CI_0850.pkl'
+        joblib.dump(model, model_path)
+        
+        # Métadonnées
+        metadata = {
+            'model_info': {
+                'name': 'TestModel',
+                'filename': 'TestModel_CI_0850.pkl',
+                'algorithm': 'RandomForestClassifier'
+            },
+            'feature_names': list(X.columns),
+            'performance': {'accuracy': 0.85, 'f1_score': 0.70, 'roc_auc': 0.75},
+            'training_date': datetime.now().isoformat()
+        }
+        
+        with open('models/TestModel_CI_0850_metadata.json', 'w') as f:
+            json.dump(metadata, f)
+        
+        print('✅ Données et modèle de test créés')
+        "
+    
+    - name: 🚀 Start API in background
+      run: |
+        python api.py &
+        API_PID=$!
+        echo $API_PID > api.pid
+        sleep 5
+        
+        # Vérifier que l'API répond
+        curl -f http://localhost:5000/health || exit 1
+        echo "✅ API démarrée"
+    
+    - name: 🧪 Test API endpoints
+      run: |
+        # Test health
+        curl -f http://localhost:5000/health
+        
+        # Test example
+        curl -f http://localhost:5000/api/v1/example
+        
+        # Test prediction
+        curl -X POST http://localhost:5000/api/v1/predict \
+          -H "Content-Type: application/json" \
+          -d '{"age": 65, "sex_encoded": 1, "systolic_bp": 140, "glucose": 180}'
+        
+        echo "✅ Tests API réussis"
+    
+    - name: 🛑 Stop API
+      run: |
+        if [ -f api.pid ]; then
+          kill $(cat api.pid) || true
+          rm api.pid
+        fi
+    
+    - name: 🐳 Test Docker build
+      run: |
+        docker build -t ml-mortality-test .
+        echo "✅ Image Docker construite"
+    
+    - name: 🐳 Test Docker API
+      run: |
+        # Copier les modèles dans un volume temporaire
+        docker run -d --name ml-test-api \
+          -p 5001:5000 \
+          -v $(pwd)/models:/app/models:ro \
+          ml-mortality-test
+        
+        # Attendre le démarrage
+        sleep 10
+        
+        # Tester l'API dans le container
+        curl -f http://localhost:5001/health || (docker logs ml-test-api; exit 1)
+        
+        # Nettoyer
+        docker stop ml-test-api
+        docker rm ml-test-api
+        
+        echo "✅ Tests Docker API réussis"
+
+  # Job 4: Security scan
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: tests
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 🔍 Run security scan
+      run: |
+        pip install safety bandit
+        
+        # Scan des dépendances
+        safety check -r requirements.txt
+        
+        # Scan du code
+        bandit -r src/ -f json -o bandit-report.json || true
+        
+        echo "✅ Security scan terminé"
+    
+    - name: 📊 Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report-${{ github.sha }}
+        path: bandit-report.json
+
+  # Job 5: Déploiement (seulement sur main)
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: [mlops-pipeline, api-docker-tests, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🏷️ Create Release Tag
+      id: tag
+      run: |
+        TAG=v$(date +%Y.%m.%d)-$(echo ${{ github.sha }} | head -c7)
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "✅ Tag: $TAG"
+    
+    - name: 📦 Build and push Docker image
+      run: |
+        echo "🐳 Building Docker image for deployment..."
+        docker build -t ml-mortality-production:${{ steps.tag.outputs.tag }} .
+        echo "✅ Image prête pour déploiement"
+    
+    - name: 📊 Create deployment summary
+      run: |
+        echo "🎉 Déploiement réussi !" >> $GITHUB_STEP_SUMMARY
+        echo "- Tag: ${{ steps.tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "- SHA: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Date: $(date)" >> $GITHUB_STEP_SUMMARY

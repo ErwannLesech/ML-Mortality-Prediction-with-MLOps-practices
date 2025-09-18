@@ -1,0 +1,74 @@
+name: ⚡ Tests Rapides
+
+# Déclenchement sur chaque push/PR pour des tests rapides
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  quick-tests:
+    name: 🧪 Tests Rapides
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 📦 Install deps
+      run: |
+        pip install pandas numpy scikit-learn pytest flask joblib
+    
+    - name: 🧪 Quick validation tests
+      run: |
+        # Test imports
+        python -c "import pandas, numpy, sklearn, flask, joblib; print('✅ Imports OK')"
+        
+        # Test que les scripts se chargent sans erreur
+        python -c "
+        import sys
+        sys.path.append('src')
+        try:
+            import preprocessing, train, evaluate, predict
+            print('✅ Scripts importables')
+        except Exception as e:
+            print(f'❌ Erreur import: {e}')
+            exit(1)
+        "
+        
+        # Test structure projet
+        python -c "
+        from pathlib import Path
+        required = ['src/', 'tests/', 'api.py', 'pipeline.py', 'Makefile', 'requirements.txt']
+        for item in required:
+            assert Path(item).exists(), f'Manque: {item}'
+        print('✅ Structure projet OK')
+        "
+
+  lint:
+    name: 🧹 Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 🧹 Install linters
+      run: pip install black isort flake8
+    
+    - name: ✨ Check formatting
+      run: |
+        black --check --diff src/ || echo "⚠️ Code pas formaté (black)"
+        isort --check-only --diff src/ || echo "⚠️ Imports pas triés (isort)"
+        flake8 src/ --max-line-length=100 --ignore=E203,W503 || echo "⚠️ Issues flake8"

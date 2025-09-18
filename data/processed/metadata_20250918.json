@@ -1,0 +1,46 @@
+{
+  "preprocessing_date": "2025-09-18T18:10:37.532015",
+  "raw_file": "data/raw/synthetic_clinical_dataset_20250918.csv",
+  "processed_file": "data/processed/clinical_processed_20250918.csv",
+  "original_rows": 10000,
+  "final_rows": 10000,
+  "original_columns": 14,
+  "final_columns": 15,
+  "categorical_encoders": {
+    "sex": [
+      "Female",
+      "Male",
+      "Other"
+    ],
+    "diagnosis": [
+      "Heart Failure",
+      "Normal",
+      "Pneumonia",
+      "Sepsis"
+    ],
+    "age_group": [
+      "elderly",
+      "middle",
+      "senior",
+      "young"
+    ]
+  },
+  "numeric_columns": [
+    "patient_id",
+    "age",
+    "sex",
+    "bmi",
+    "systolic_bp",
+    "diastolic_bp",
+    "glucose",
+    "cholesterol",
+    "creatinine",
+    "diabetes",
+    "hypertension",
+    "diagnosis",
+    "readmission_30d",
+    "mortality",
+    "age_group"
+  ],
+  "target_column": "mortality"
+}

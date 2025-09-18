@@ -1,0 +1,64 @@
+# Fichiers à ignorer dans l'image Docker
+
+# Logs et caches
+*.log
+logs/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Données temporaires et modèles locaux (seront montés en volumes)
+data/raw/*
+data/processed/*
+models/*.pkl
+reports/*
+
+# Git
+.git
+.gitignore
+
+# IDE et éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CI/CD
+.github/
+
+# Documentation
+README.md
+docs/
+
+# Tests (inclus dans l'image mais pas les résultats)
+.coverage
+htmlcov/
+.tox/
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Makefile local overrides
+Makefile.local
+
+# PID files
+*.pid
+
+# Données de développement
+*.csv.backup
+*.pkl.backup
+test_*.csv
