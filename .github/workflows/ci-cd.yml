@@ -77,13 +77,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: clinical-mortality-app/frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: clinical-mortality-app/frontend
         run: |
-          # Remove lock file if it exists and reinstall to fix sync issues
-          rm -f package-lock.json
-          npm install
           npm ci
 
       - name: Lint JavaScript/React
@@ -159,6 +158,8 @@ jobs:
           file: ./clinical-mortality-app/backend/Dockerfile
           push: false
           tags: clinical-mortality-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build frontend image
         uses: docker/build-push-action@v5
@@ -167,6 +168,8 @@ jobs:
           file: ./clinical-mortality-app/frontend/Dockerfile
           push: false
           tags: clinical-mortality-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   integration-tests:
     name: Integration Tests
