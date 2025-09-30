@@ -1,1 +1,48 @@
+# Backend Python files
+clinical-mortality-app/backend/__pycache__/
+clinical-mortality-app/backend/*.pyc
+clinical-mortality-app/backend/.pytest_cache/
+clinical-mortality-app/backend/htmlcov/
+clinical-mortality-app/backend/.coverage
+clinical-mortality-app/backend/coverage.xml
+
+# Frontend build and dependencies
+clinical-mortality-app/frontend/node_modules/
+clinical-mortality-app/frontend/dist/
+clinical-mortality-app/frontend/.vite/
+clinical-mortality-app/frontend/coverage/
+
+# Environment files
 *.env
+.env
+.env.local
+.env.production
+.env.test
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Security reports
+bandit-report.json
+safety-report.json
+
+# Temporary files
+.tmp/
+temp/

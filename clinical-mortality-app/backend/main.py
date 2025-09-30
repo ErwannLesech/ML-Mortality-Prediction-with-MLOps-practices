@@ -1,3 +1,7 @@
+import os
+
+import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -20,12 +24,18 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Frontend Docker container
-        "http://frontend:80"      # Internal Docker network
+        "http://frontend:80",  # Internal Docker network
+        "http://127.0.0.1:5173",  # Alternative localhost
+        "http://127.0.0.1:3000",  # Alternative localhost
+        "http://0.0.0.0:3000",  # Alternative localhost
+        "https://ml-mortality-prediction-frontend.onrender.com",  # Production frontend
+        "https://ml-mortality-prediction-with-mlops.onrender.com",  # Production backend
     ],
     allow_credentials=True,
     allow_methods=["*","OPTIONS"],
     allow_headers=["*"],
 )
+
 
 class PatientData(BaseModel):
     age: int
@@ -58,9 +68,11 @@ class Metric(BaseModel):
 async def root():
     return {"message": "Clinical Mortality Prediction API"}
 
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
 
 @app.post("/predict")
 async def predict_mortality(patient: PatientData):
@@ -77,24 +89,22 @@ async def predict_mortality(patient: PatientData):
         payload = {
             "features": {
                 **patient.dict(),
-                "mortality": "0"  # Champ inutile mais requis
+                "mortality": "0",  # Champ inutile mais requis
             }
         }
-        
+
         # Appeler l'API Dataiku
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 os.getenv("DATAIKU_API_URL"),
                 json=payload,
-                headers={
-                    "Authorization": f"Bearer {os.getenv('DATAIKU_API_TOKEN')}"
-                },
-                timeout=30.0
+                headers={"Authorization": f"Bearer {os.getenv('DATAIKU_API_TOKEN')}"},
+                timeout=30.0,
             )
-            
+
             response.raise_for_status()
             return response.json()
-            
+
     except httpx.HTTPError as e:
         status = "API Error"
         s = smtplib.SMTP('smtp.gmail.com', 587)

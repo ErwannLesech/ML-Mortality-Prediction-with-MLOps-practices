@@ -1,0 +1,1 @@
+"""Test configuration for the clinical mortality prediction API."""

@@ -1,25 +1,43 @@
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copier package.json et package-lock.json (si disponible)
+# Copy package files
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm install
+# Install dependencies
+RUN npm ci || npm install
 
-# Copier le code source
+# Copy source code
 COPY . .
 
-# Construire l'application pour la production
+# Build argument for API URL
+ARG VITE_API_URL=https://ml-mortality-prediction-with-mlops.onrender.com
+ENV VITE_API_URL=$VITE_API_URL
+
+# Build the application
 RUN npm run build
 
-# Utiliser nginx pour servir l'application
+# Production stage
 FROM nginx:alpine
-COPY --from=0 /app/dist /usr/share/nginx/html
 
-# Copier la configuration nginx personnalisée
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy built app
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Build argument to determine which nginx config to use
+ARG ENVIRONMENT=production
+
+# Copy appropriate nginx config based on environment
+COPY nginx.conf /etc/nginx/conf.d/default.conf.prod
+COPY nginx.local.conf /etc/nginx/conf.d/default.conf.local
+
+# Use the appropriate config file based on VITE_API_URL
+RUN if echo "$VITE_API_URL" | grep -q "localhost\|backend"; then \
+        cp /etc/nginx/conf.d/default.conf.local /etc/nginx/conf.d/default.conf; \
+    else \
+        cp /etc/nginx/conf.d/default.conf.prod /etc/nginx/conf.d/default.conf; \
+    fi
 
 EXPOSE 80
 
