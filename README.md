@@ -250,14 +250,8 @@ Nous accueillons toutes les contributions ! Voici comment procéder :
 
 ```bash
 # Fork via l'interface GitHub, puis clone
-git clone https://github.com/VOTRE-USERNAME/ML-Mortality-Prediction-with-MLOps-practices.git
-cd ML-Mortality-Prediction-with-MLOps-practices
-```
-
-### 2. Configuration du repository upstream
-
-```bash
-git remote add upstream https://github.com/ErwannLesech/ML-Mortality-Prediction-with-MLOps-practices.git
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
 git fetch upstream
 ```
 
