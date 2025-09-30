@@ -1,0 +1,21 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deployment notification
+        run: |
+          echo "Deployment triggered to Render"
+          echo "Services will be automatically deployed"
+          echo "Monitor deployment status in Render dashboard"
