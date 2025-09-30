@@ -12,7 +12,11 @@ app = FastAPI(title="Clinical Mortality Prediction API")
 # CORS pour autoriser le frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Frontend Docker container
+        "http://frontend:80"      # Internal Docker network
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
