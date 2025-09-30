@@ -152,7 +152,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build backend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./clinical-mortality-app/backend
           file: ./clinical-mortality-app/backend/Dockerfile
@@ -162,7 +162,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build frontend image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./clinical-mortality-app/frontend
           file: ./clinical-mortality-app/frontend/Dockerfile
