@@ -67,9 +67,7 @@ async def predict_mortality(patient: PatientData):
             response = await client.post(
                 os.getenv("DATAIKU_API_URL"),
                 json=payload,
-                headers={
-                    "Authorization": f"Bearer {os.getenv('DATAIKU_API_TOKEN')}"
-                },
+                headers={"Authorization": f"Bearer {os.getenv('DATAIKU_API_TOKEN')}"},
                 timeout=30.0,
             )
 
