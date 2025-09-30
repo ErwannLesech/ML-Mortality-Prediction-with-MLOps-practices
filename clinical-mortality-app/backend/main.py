@@ -17,6 +17,11 @@ app.add_middleware(
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Frontend Docker container
         "http://frontend:80",  # Internal Docker network
+        "http://127.0.0.1:5173",  # Alternative localhost
+        "http://127.0.0.1:3000",  # Alternative localhost
+        "http://0.0.0.0:3000",  # Alternative localhost
+        "https://ml-mortality-prediction-frontend.onrender.com",  # Production frontend
+        "https://ml-mortality-prediction-with-mlops.onrender.com"  # Production backend (self)
     ],
     allow_credentials=True,
     allow_methods=["*"],
