@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from datetime import datetime
 import logging
+import smtplib, ssl
+from email.message import EmailMessage
 
 load_dotenv()
 
@@ -95,6 +97,17 @@ async def predict_mortality(patient: PatientData):
             
     except httpx.HTTPError as e:
         status = "API Error"
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        sender=os.getenv("SENDER_EMAIL")
+        s.starttls()
+
+        s.login(sender, os.getenv("SENDER_PASSWORD"))
+
+        message = "The Dataiku API is not responding. Please check the service."
+
+        s.sendmail(sender, sender, message)
+
+        s.quit()
         raise HTTPException(status_code=500, detail=f"Error calling Dataiku API: {str(e)}")
     except Exception as e:
         status = "Internal Server Error"
