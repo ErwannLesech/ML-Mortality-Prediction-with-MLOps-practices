@@ -189,20 +189,20 @@ jobs:
 
       - name: Start services with Docker Compose
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
           sleep 30
 
       - name: Health check - Backend
         run: |
-          curl -f http://localhost:8000/health || (docker-compose logs backend && exit 1)
+          curl -f http://localhost:8000/health || (docker compose logs backend && exit 1)
 
       - name: Health check - Frontend
         run: |
-          curl -f http://localhost:3000 || (docker-compose logs frontend && exit 1)
+          curl -f http://localhost:3000 || (docker compose logs frontend && exit 1)
 
       - name: Cleanup
         if: always()
-        run: docker-compose down
+        run: docker compose down
 
   deployment-ready:
     name: Deployment Ready
