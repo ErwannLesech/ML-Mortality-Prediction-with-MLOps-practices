@@ -59,7 +59,8 @@ function App() {
         creatinine: parseFloat(formData.creatinine)
       }
 
-      const response = await axios.post('http://localhost:8000/predict', payload)
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://ml-mortality-prediction-with-mlops.onrender.com'
+      const response = await axios.post(`${apiUrl}/predict`, payload)
       setPrediction(response.data)
     } catch (err) {
       setError(err.response?.data?.detail || 'Une erreur est survenue lors de la prédiction')
