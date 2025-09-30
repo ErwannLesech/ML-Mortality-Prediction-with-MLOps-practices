@@ -21,6 +21,8 @@ services:
       - DATAIKU_API_URL=${DATAIKU_API_URL}
       - DATAIKU_API_TOKEN=${DATAIKU_API_TOKEN}
       - MONGO_URI=${MONGO_URI}
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - SENDER_PASSWORD=${SENDER_PASSWORD}
     volumes:
       - ./clinical-mortality-app/backend:/app
     networks:

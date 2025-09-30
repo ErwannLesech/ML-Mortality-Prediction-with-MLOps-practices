@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from datetime import datetime
 import logging
 import smtplib, ssl
-from email.message import EmailMessage
+from email.mime.text import MIMEText
 
 load_dotenv()
 
@@ -109,13 +109,19 @@ async def predict_mortality(patient: PatientData):
         status = "API Error"
         s = smtplib.SMTP('smtp.gmail.com', 587)
         sender=os.getenv("SENDER_EMAIL")
+        password=os.getenv("SENDER_PASSWORD")
+        logging.info(f"SENDER EMAIL: {sender}")
+        logging.info(f"SENDER PASSWORD: {password}")
         s.starttls()
+        
+        text = "The Dataiku API is not responding. Please check the service."
+        s.login(sender, password)
+        message = MIMEText(text, "plain")
+        message["Subject"] = "Dataiku API Error Alert"
+        message["From"] = sender
+        message["To"] = sender
 
-        s.login(sender, os.getenv("SENDER_PASSWORD"))
-
-        message = "The Dataiku API is not responding. Please check the service."
-
-        s.sendmail(sender, sender, message)
+        s.sendmail(sender, sender, message.as_string())
 
         s.quit()
         raise HTTPException(status_code=500, detail=f"Error calling Dataiku API: {str(e)}")
