@@ -21,7 +21,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",  # Alternative localhost
         "http://0.0.0.0:3000",  # Alternative localhost
         "https://ml-mortality-prediction-frontend.onrender.com",  # Production frontend
-        "https://ml-mortality-prediction-with-mlops.onrender.com",  # Production backend (self)
+        "https://ml-mortality-prediction-with-mlops.onrender.com",  # Production backend
     ],
     allow_credentials=True,
     allow_methods=["*"],
