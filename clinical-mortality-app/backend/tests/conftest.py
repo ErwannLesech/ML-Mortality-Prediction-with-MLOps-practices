@@ -26,5 +26,5 @@ def sample_patient_data():
         "diabetes": 1,
         "hypertension": 1,
         "diagnosis": "Heart Failure",
-        "readmission_30d": 0
+        "readmission_30d": 0,
     }

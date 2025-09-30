@@ -78,11 +78,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: clinical-mortality-app/frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: clinical-mortality-app/frontend
-        run: npm ci
+        run: |
+          # Remove lock file if it exists and reinstall to fix sync issues
+          rm -f package-lock.json
+          npm install
+          npm ci
 
       - name: Lint JavaScript/React
         working-directory: clinical-mortality-app/frontend

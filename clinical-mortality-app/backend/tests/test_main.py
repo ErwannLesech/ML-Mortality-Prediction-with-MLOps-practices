@@ -48,7 +48,7 @@ def test_predict_endpoint_invalid_data_types(client: TestClient):
         "diabetes": 1,
         "hypertension": 1,
         "diagnosis": "Heart Failure",
-        "readmission_30d": 0
+        "readmission_30d": 0,
     }
     response = client.post("/predict", json=invalid_data)
     assert response.status_code == 422  # Validation error
