@@ -4,6 +4,9 @@ from pydantic import BaseModel
 import httpx
 import os
 from dotenv import load_dotenv
+from pymongo import MongoClient
+from datetime import datetime
+import logging
 
 load_dotenv()
 
@@ -18,7 +21,7 @@ app.add_middleware(
         "http://frontend:80"      # Internal Docker network
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*","OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -36,6 +39,19 @@ class PatientData(BaseModel):
     diagnosis: str
     readmission_30d: int
 
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
+client = MongoClient(MONGO_URI)
+db = client["metricsdb"]
+metrics_collection = db["metrics"]
+
+
+class Metric(BaseModel):
+    status: str
+    latency: float
+    timestamp: datetime = datetime.utcnow()
+
+
+
 @app.get("/")
 async def root():
     return {"message": "Clinical Mortality Prediction API"}
@@ -49,6 +65,11 @@ async def predict_mortality(patient: PatientData):
     """
     Proxy vers l'API Dataiku pour prédire la mortalité
     """
+    logging.info(f"Received prediction request for patient: {patient}")
+    start_time = datetime.utcnow().timestamp()
+    url = os.getenv("DATAIKU_API_URL")
+    status = "success"
+    latency = None
     try:
         # Préparer les données pour Dataiku
         payload = {
@@ -73,10 +94,37 @@ async def predict_mortality(patient: PatientData):
             return response.json()
             
     except httpx.HTTPError as e:
+        status = "API Error"
         raise HTTPException(status_code=500, detail=f"Error calling Dataiku API: {str(e)}")
     except Exception as e:
+        status = "Internal Server Error"
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    finally:
+        latency = datetime.utcnow().timestamp()- start_time
+        metric = Metric(status=status, latency=latency, timestamp=datetime.utcnow().timestamp())
+        try:
+            metrics_collection.insert_one(metric.dict())
+        except Exception as e:
+            print(f"Failed to log metric: {str(e)}")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/metrics")
+def create_metric(metric: Metric):
+    try:
+        metrics_collection.insert_one(metric.dict())
+        return {"message": "Metric saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/metrics")
+def get_metrics():
+    try:
+        docs = metrics_collection.find().sort("timestamp", -1)
+        result = []
+        for doc in docs:
+            if "_id" in doc:
+                del doc["_id"]  # Remove the _id field
+            result.append(doc)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

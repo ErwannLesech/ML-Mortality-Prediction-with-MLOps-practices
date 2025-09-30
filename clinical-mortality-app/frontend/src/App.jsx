@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import Metrics from './Dashboard/Metrics'
 
-function App() {
+function Prediction() {
   const [formData, setFormData] = useState({
     age: '',
     sex: 'Male',
@@ -58,7 +60,7 @@ function App() {
         cholesterol: parseFloat(formData.cholesterol),
         creatinine: parseFloat(formData.creatinine)
       }
-
+      console.log('Submitting payload:', payload)
       const response = await axios.post('http://localhost:8000/predict', payload)
       setPrediction(response.data)
     } catch (err) {
@@ -453,6 +455,21 @@ function App() {
         </div>
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <nav className="p-4 flex gap-4 bg-slate-900 text-white">
+        <Link to="/">Prédiction</Link>
+        <Link to="/metrics">Métriques</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Prediction />} />
+        <Route path="/metrics" element={<Metrics />} />
+      </Routes>
+    </Router>
   )
 }
 
