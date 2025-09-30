@@ -94,8 +94,9 @@ Le modèle de machine learning, hébergé sur Dataiku, fournit une probabilité 
 ### 1. Cloner le repository
 
 ```bash
-git clone https://github.com/ErwannLesech/ML-Mortality-Prediction-with-MLOps-practices.git
+git clone <your-repository-url>
 cd ML-Mortality-Prediction-with-MLOps-practices
+# Remplacez <your-repository-url> par l'URL de votre fork ou du dépôt souhaité
 ```
 
 ### 2. Configuration des variables d'environnement
