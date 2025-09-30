@@ -3,8 +3,6 @@ name: CI/CD Pipeline
 on:
   pull_request:
     branches: [develop, master, main]
-  push:
-    branches: [develop, master, main]
   workflow_dispatch:
 
 env:
@@ -59,7 +57,7 @@ jobs:
           mypy clinical-mortality-app/backend/ --ignore-missing-imports || echo "Type check completed"
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-reports
@@ -101,7 +99,7 @@ jobs:
         run: npm run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: clinical-mortality-app/frontend/dist/
@@ -132,7 +130,7 @@ jobs:
           pytest tests/ -v --cov=. --cov-report=xml || echo "Tests completed"
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
@@ -247,7 +245,7 @@ jobs:
           EOF
 
       - name: Upload deployment summary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-summary
           path: deployment-summary.md
