@@ -126,16 +126,16 @@ def create_mongo_client():
                 except Exception as e:
                     logger.warning(f"Configuration {i+1} failed: {e}")
                     try:
-                        if 'client' in locals():
+                        if "client" in locals():
                             client.close()
                     except:
                         pass
                     continue
-            
+
             # Try alternative URI configurations if all above failed
             logger.info("Trying alternative MongoDB URI configurations...")
             alternative_uris = []
-            
+
             # Extract base URI components
             if "?" in MONGO_URI:
                 base_uri = MONGO_URI.split("?")[0]
@@ -145,7 +145,7 @@ def create_mongo_client():
                     f"{base_uri}?retryWrites=true&w=majority",
                     f"{base_uri}?ssl=false&retryWrites=false",
                 ]
-            
+
             for j, alt_uri in enumerate(alternative_uris):
                 try:
                     logger.info(f"Trying alternative URI configuration {j+1}")
@@ -154,22 +154,26 @@ def create_mongo_client():
                         serverSelectionTimeoutMS=10000,
                         connectTimeoutMS=10000,
                         socketTimeoutMS=10000,
-                        maxPoolSize=1
+                        maxPoolSize=1,
                     )
                     client.admin.command("ping")
-                    logger.info(f"MongoDB connection successful with alternative URI {j+1}")
+                    logger.info(
+                        f"MongoDB connection successful with alternative URI {j+1}"
+                    )
                     return client, True
                 except Exception as e:
                     logger.warning(f"Alternative URI {j+1} failed: {e}")
                     try:
-                        if 'client' in locals():
+                        if "client" in locals():
                             client.close()
                     except:
                         pass
                     continue
 
             # If all configurations failed, raise the last exception
-            raise Exception("All MongoDB SSL configurations and alternative URIs failed")
+            raise Exception(
+                "All MongoDB SSL configurations and alternative URIs failed"
+            )
 
         else:
             # Configuration locale pour développement
@@ -340,7 +344,9 @@ def get_metrics():
     elif USE_MEMORY_STORAGE:
         try:
             # Return metrics sorted by timestamp (newest first)
-            sorted_metrics = sorted(in_memory_metrics, key=lambda x: x.get('timestamp', 0), reverse=True)
+            sorted_metrics = sorted(
+                in_memory_metrics, key=lambda x: x.get("timestamp", 0), reverse=True
+            )
             logger.info(f"Retrieved {len(sorted_metrics)} metrics from memory")
             return sorted_metrics
         except Exception as e:
