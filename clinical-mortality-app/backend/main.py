@@ -59,20 +59,83 @@ class PatientData(BaseModel):
 
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
-try:
-    client = MongoClient(MONGO_URI)
-    # Test the connection
-    client.admin.command("ping")
+
+
+# Configuration MongoDB spécifique pour Render et MongoDB Atlas
+def create_mongo_client():
+    """Create MongoDB client with proper SSL configuration for Render deployment"""
+    try:
+        # Check if we're using MongoDB Atlas (contains mongodb.net)
+        if "mongodb.net" in MONGO_URI:
+            logger.info("Configuring MongoDB Atlas connection for Render")
+
+            # Try different SSL configurations for MongoDB Atlas on Render
+            ssl_configs = [
+                # Configuration 1: Standard SSL with all security checks
+                {
+                    "tls": True,
+                    "tlsAllowInvalidCertificates": False,
+                    "tlsAllowInvalidHostnames": False,
+                    "retryWrites": True,
+                    "maxPoolSize": 10,
+                    "serverSelectionTimeoutMS": 30000,
+                    "connectTimeoutMS": 30000,
+                    "socketTimeoutMS": 30000,
+                    "heartbeatFrequencyMS": 10000,
+                    "maxIdleTimeMS": 30000,
+                },
+                # Configuration 2: Relaxed SSL for Render compatibility
+                {
+                    "ssl": True,
+                    "ssl_cert_reqs": "CERT_NONE",
+                    "retryWrites": True,
+                    "maxPoolSize": 5,
+                    "serverSelectionTimeoutMS": 20000,
+                    "connectTimeoutMS": 20000,
+                    "socketTimeoutMS": 20000,
+                },
+            ]
+
+            for i, config in enumerate(ssl_configs):
+                try:
+                    logger.info(f"Trying MongoDB connection configuration {i+1}")
+                    client = MongoClient(MONGO_URI, **config)
+                    # Test the connection
+                    client.admin.command("ping")
+                    logger.info(
+                        f"MongoDB connection successful with configuration {i+1}"
+                    )
+                    return client, True
+                except Exception as e:
+                    logger.warning(f"Configuration {i+1} failed: {e}")
+                    if client:
+                        client.close()
+                    continue
+
+            # If all configurations failed, raise the last exception
+            raise Exception("All MongoDB SSL configurations failed")
+
+        else:
+            # Configuration locale pour développement
+            client = MongoClient(MONGO_URI)
+            client.admin.command("ping")
+            logger.info("MongoDB connection established successfully")
+            return client, True
+
+    except Exception as e:
+        logger.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
+        return None, False
+
+
+# Initialize MongoDB connection
+client, mongo_available = create_mongo_client()
+if mongo_available and client:
     db = client["metricsdb"]
     metrics_collection = db["metrics"]
-    mongo_available = True
-    logger.info("MongoDB connection established successfully")
-except Exception as e:
-    logger.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
+else:
     client = None
     db = None
     metrics_collection = None
-    mongo_available = False
 
 
 class Metric(BaseModel):
