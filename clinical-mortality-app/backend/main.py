@@ -1,7 +1,6 @@
 import logging
 import os
 import smtplib
-import ssl
 from datetime import datetime
 from email.mime.text import MIMEText
 
@@ -79,7 +78,6 @@ async def predict_mortality(patient: PatientData):
     """
     logging.info(f"Received prediction request for patient: {patient}")
     start_time = datetime.utcnow().timestamp()
-    url = os.getenv("DATAIKU_API_URL")
     status = "success"
     latency = None
     try:
