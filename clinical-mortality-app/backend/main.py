@@ -53,7 +53,7 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
 try:
     client = MongoClient(MONGO_URI)
     # Test the connection
-    client.admin.command('ping')
+    client.admin.command("ping")
     db = client["metricsdb"]
     metrics_collection = db["metrics"]
     mongo_available = True
