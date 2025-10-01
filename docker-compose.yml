@@ -21,6 +21,7 @@ services:
       - MONGO_URI=${MONGO_URI}
       - SENDER_EMAIL=${SENDER_EMAIL}
       - SENDER_PASSWORD=${SENDER_PASSWORD}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
     volumes:
       - ./clinical-mortality-app/backend:/app
     networks:

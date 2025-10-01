@@ -4,3 +4,4 @@ httpx==0.25.2
 python-dotenv==1.0.0
 pydantic==2.5.0
 pymongo==4.15.1
+sendgrid==6.12.5

@@ -10,7 +10,8 @@ function Metrics() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/metrics");
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://ml-mortality-prediction-with-mlops.onrender.com';
+        const res = await axios.get(`${apiUrl}/metrics`);
         setMetrics(res.data.reverse()); // oldest first
       } catch (err) {
         console.error("Failed to fetch metrics", err);
