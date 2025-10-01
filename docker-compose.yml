@@ -1,14 +1,4 @@
 services:
-  mongo:
-    image: mongo:7.0
-    container_name: metrics-mongo
-    restart: always
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - app-network
   backend:
     build:
       context: ./clinical-mortality-app/backend
@@ -18,7 +8,6 @@ services:
     environment:
       - DATAIKU_API_URL=${DATAIKU_API_URL}
       - DATAIKU_API_TOKEN=${DATAIKU_API_TOKEN}
-      - MONGO_URI=${MONGO_URI}
       - SENDER_EMAIL=${SENDER_EMAIL}
       - SENDER_PASSWORD=${SENDER_PASSWORD}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
@@ -45,6 +34,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  mongo-data:
