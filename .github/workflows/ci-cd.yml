@@ -185,7 +185,6 @@ jobs:
           cat > .env << EOF
           DATAIKU_API_URL=https://mock-api.example.com/predict
           DATAIKU_API_TOKEN=test-token-123
-          MONGO_URI=mongodb://mongo:27017
           SENDER_EMAIL=test@example.com
           SENDER_PASSWORD=test-password
           EOF
