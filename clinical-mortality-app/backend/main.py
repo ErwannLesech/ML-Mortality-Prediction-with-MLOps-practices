@@ -119,7 +119,10 @@ async def predict_mortality(patient: PatientData):
             from_email=os.getenv("SENDER_EMAIL"),
             to_emails=os.getenv("SENDER_EMAIL"),
             subject="Dataiku API Error Alert",
-            html_content="<strong>The Dataiku API is not responding. Please check the service.</strong>",
+            html_content=(
+                "<strong>The Dataiku API is not responding. "
+                "Please check the service.</strong>"
+            ),
         )
         try:
             sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
