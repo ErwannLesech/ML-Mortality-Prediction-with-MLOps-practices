@@ -116,20 +116,21 @@ async def predict_mortality(patient: PatientData):
         status = "API Error"
 
         message = Mail(
-            from_email=os.getenv('SENDER_EMAIL'),
-            to_emails=os.getenv('SENDER_EMAIL'),
-            subject='Dataiku API Error Alert',
-            html_content='<strong>The Dataiku API is not responding. Please check the service.</strong>')
+            from_email=os.getenv("SENDER_EMAIL"),
+            to_emails=os.getenv("SENDER_EMAIL"),
+            subject="Dataiku API Error Alert",
+            html_content="<strong>The Dataiku API is not responding. Please check the service.</strong>",
+        )
         try:
-            sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
-            #sg.set_sendgrid_data_residency("eu")
+            sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+            # sg.set_sendgrid_data_residency("eu")
 
             response = sg.send(message)
             print(response.status_code)
             print(response.body)
             print(response.headers)
         except Exception as e2:
-            print(os.getenv('SENDGRID_API_KEY'))
+            print(os.getenv("SENDGRID_API_KEY"))
             print(str(e2))
         raise HTTPException(
             status_code=500, detail=f"Error calling Dataiku API: {str(e)}"
