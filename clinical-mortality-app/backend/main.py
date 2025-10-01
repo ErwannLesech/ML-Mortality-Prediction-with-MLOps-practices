@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from datetime import datetime
 
 import httpx
@@ -12,6 +13,14 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 load_dotenv()
+
+# Configuration du logging pour Render
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Clinical Mortality Prediction API")
 
@@ -57,9 +66,9 @@ try:
     db = client["metricsdb"]
     metrics_collection = db["metrics"]
     mongo_available = True
-    logging.info("MongoDB connection established successfully")
+    logger.info("MongoDB connection established successfully")
 except Exception as e:
-    logging.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
+    logger.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
     client = None
     db = None
     metrics_collection = None
@@ -87,7 +96,7 @@ async def predict_mortality(patient: PatientData):
     """
     Proxy vers l'API Dataiku pour prédire la mortalité
     """
-    logging.info(f"Received prediction request for patient: {patient}")
+    logger.info(f"Received prediction request for patient: {patient}")
     start_time = datetime.utcnow().timestamp()
     status = "success"
     latency = None
@@ -102,6 +111,7 @@ async def predict_mortality(patient: PatientData):
 
         # Appeler l'API Dataiku
         async with httpx.AsyncClient() as client:
+            logger.info(f"Calling Dataiku API with payload: {payload}")
             response = await client.post(
                 os.getenv("DATAIKU_API_URL"),
                 json=payload,
@@ -110,10 +120,13 @@ async def predict_mortality(patient: PatientData):
             )
 
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            logger.info(f"Dataiku API response: {result}")
+            return result
 
     except httpx.HTTPError as e:
         status = "API Error"
+        logger.error(f"Dataiku API error: {str(e)}")
 
         message = Mail(
             from_email=os.getenv("SENDER_EMAIL"),
@@ -129,17 +142,15 @@ async def predict_mortality(patient: PatientData):
             # sg.set_sendgrid_data_residency("eu")
 
             response = sg.send(message)
-            print(response.status_code)
-            print(response.body)
-            print(response.headers)
+            logger.info(f"Email sent successfully: {response.status_code}")
         except Exception as e2:
-            print(os.getenv("SENDGRID_API_KEY"))
-            print(str(e2))
+            logger.error(f"Failed to send email: {str(e2)}")
         raise HTTPException(
             status_code=500, detail=f"Error calling Dataiku API: {str(e)}"
         )
     except Exception as e:
         status = "Internal Server Error"
+        logger.error(f"Internal server error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     finally:
         latency = datetime.utcnow().timestamp() - start_time
@@ -150,25 +161,31 @@ async def predict_mortality(patient: PatientData):
             if mongo_available and metrics_collection is not None:
                 metrics_collection.insert_one(metric.dict())
             else:
-                logging.info(f"Metric (not stored): {metric.dict()}")
+                logger.info(f"Metric (not stored): {metric.dict()}")
         except Exception as e:
-            print(f"Failed to log metric: {str(e)}")
+            logger.error(f"Failed to log metric: {str(e)}")
 
 
 @app.post("/metrics")
 def create_metric(metric: Metric):
+    logger.info(f"Creating metric: {metric}")
     if not mongo_available or metrics_collection is None:
+        logger.warning("Database not available for metrics creation")
         raise HTTPException(status_code=503, detail="Database not available")
     try:
         metrics_collection.insert_one(metric.dict())
+        logger.info("Metric saved successfully")
         return {"message": "Metric saved"}
     except Exception as e:
+        logger.error(f"Failed to save metric: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/metrics")
 def get_metrics():
+    logger.info("Getting metrics from database")
     if not mongo_available or metrics_collection is None:
+        logger.warning("Database not available for metrics retrieval")
         return []  # Return empty list if database not available
     try:
         docs = metrics_collection.find().sort("timestamp", -1)
@@ -177,7 +194,9 @@ def get_metrics():
             if "_id" in doc:
                 del doc["_id"]  # Remove the _id field
             result.append(doc)
+        logger.info(f"Retrieved {len(result)} metrics")
         return result
 
     except Exception as e:
+        logger.error(f"Failed to retrieve metrics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
