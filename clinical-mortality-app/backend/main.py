@@ -32,7 +32,7 @@ app.add_middleware(
         "https://ml-mortality-prediction-with-mlops.onrender.com",  # Production backend
     ],
     allow_credentials=True,
-    allow_methods=["*","OPTIONS"],
+    allow_methods=["*", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -51,6 +51,7 @@ class PatientData(BaseModel):
     diagnosis: str
     readmission_30d: int
 
+
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
 client = MongoClient(MONGO_URI)
 db = client["metricsdb"]
@@ -61,7 +62,6 @@ class Metric(BaseModel):
     status: str
     latency: float
     timestamp: datetime = datetime.utcnow()
-
 
 
 @app.get("/")
@@ -107,13 +107,13 @@ async def predict_mortality(patient: PatientData):
 
     except httpx.HTTPError as e:
         status = "API Error"
-        s = smtplib.SMTP('smtp.gmail.com', 587)
-        sender=os.getenv("SENDER_EMAIL")
-        password=os.getenv("SENDER_PASSWORD")
+        s = smtplib.SMTP("smtp.gmail.com", 587)
+        sender = os.getenv("SENDER_EMAIL")
+        password = os.getenv("SENDER_PASSWORD")
         logging.info(f"SENDER EMAIL: {sender}")
         logging.info(f"SENDER PASSWORD: {password}")
         s.starttls()
-        
+
         text = "The Dataiku API is not responding. Please check the service."
         s.login(sender, password)
         message = MIMEText(text, "plain")
@@ -124,17 +124,22 @@ async def predict_mortality(patient: PatientData):
         s.sendmail(sender, sender, message.as_string())
 
         s.quit()
-        raise HTTPException(status_code=500, detail=f"Error calling Dataiku API: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error calling Dataiku API: {str(e)}"
+        )
     except Exception as e:
         status = "Internal Server Error"
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     finally:
-        latency = datetime.utcnow().timestamp()- start_time
-        metric = Metric(status=status, latency=latency, timestamp=datetime.utcnow().timestamp())
+        latency = datetime.utcnow().timestamp() - start_time
+        metric = Metric(
+            status=status, latency=latency, timestamp=datetime.utcnow().timestamp()
+        )
         try:
             metrics_collection.insert_one(metric.dict())
         except Exception as e:
             print(f"Failed to log metric: {str(e)}")
+
 
 @app.post("/metrics")
 def create_metric(metric: Metric):
@@ -143,6 +148,7 @@ def create_metric(metric: Metric):
         return {"message": "Metric saved"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/metrics")
 def get_metrics():
