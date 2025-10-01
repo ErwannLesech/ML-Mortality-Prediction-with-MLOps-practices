@@ -49,21 +49,8 @@ class PatientData(BaseModel):
     readmission_30d: int
 
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
-try:
-    client = MongoClient(MONGO_URI)
-    # Test the connection
-    client.admin.command("ping")
-    db = client["metricsdb"]
-    metrics_collection = db["metrics"]
-    mongo_available = True
-    logging.info("MongoDB connection established successfully")
-except Exception as e:
-    logging.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
-    client = None
-    db = None
-    metrics_collection = None
-    mongo_available = False
+# In-memory metrics store (replaces MongoDB for demo/dev)
+metrics_store = []
 
 
 class Metric(BaseModel):
@@ -143,20 +130,15 @@ async def predict_mortality(patient: PatientData):
             status=status, latency=latency, timestamp=datetime.utcnow().timestamp()
         )
         try:
-            if mongo_available and metrics_collection is not None:
-                metrics_collection.insert_one(metric.dict())
-            else:
-                logging.info(f"Metric (not stored): {metric.dict()}")
+            metrics_store.append(metric.dict())
         except Exception as e:
             print(f"Failed to log metric: {str(e)}")
 
 
 @app.post("/metrics")
 def create_metric(metric: Metric):
-    if not mongo_available or metrics_collection is None:
-        raise HTTPException(status_code=503, detail="Database not available")
     try:
-        metrics_collection.insert_one(metric.dict())
+        metrics_store.append(metric.dict())
         return {"message": "Metric saved"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -164,16 +146,9 @@ def create_metric(metric: Metric):
 
 @app.get("/metrics")
 def get_metrics():
-    if not mongo_available or metrics_collection is None:
-        return []  # Return empty list if database not available
     try:
-        docs = metrics_collection.find().sort("timestamp", -1)
-        result = []
-        for doc in docs:
-            if "_id" in doc:
-                del doc["_id"]  # Remove the _id field
-            result.append(doc)
-        return result
-
+        # Return metrics in reverse chronological order (latest first)
+        metrics_store.sort(key=lambda x: x['timestamp'], reverse=True)
+        return metrics_store
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
