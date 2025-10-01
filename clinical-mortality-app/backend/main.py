@@ -57,7 +57,6 @@ class PatientData(BaseModel):
     readmission_30d: int
 
 
-# In-memory metrics store (replaces MongoDB for demo/dev)
 metrics_store = []
 
 
