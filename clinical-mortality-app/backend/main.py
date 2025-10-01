@@ -1,18 +1,16 @@
+import logging
 import os
+import smtplib
+import ssl
+from datetime import datetime
+from email.mime.text import MIMEText
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import httpx
-import os
-from dotenv import load_dotenv
 from pymongo import MongoClient
-from datetime import datetime
-import logging
-import smtplib, ssl
-from email.mime.text import MIMEText
 
 load_dotenv()
 
