@@ -1,8 +1,6 @@
 import logging
 import os
-import smtplib
 from datetime import datetime
-from email.mime.text import MIMEText
 
 import httpx
 from dotenv import load_dotenv
@@ -10,6 +8,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pymongo import MongoClient
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 load_dotenv()
 
@@ -114,23 +114,23 @@ async def predict_mortality(patient: PatientData):
 
     except httpx.HTTPError as e:
         status = "API Error"
-        s = smtplib.SMTP("smtp.gmail.com", 587)
-        sender = os.getenv("SENDER_EMAIL")
-        password = os.getenv("SENDER_PASSWORD")
-        logging.info(f"SENDER EMAIL: {sender}")
-        logging.info(f"SENDER PASSWORD: {password}")
-        s.starttls()
 
-        text = "The Dataiku API is not responding. Please check the service."
-        s.login(sender, password)
-        message = MIMEText(text, "plain")
-        message["Subject"] = "Dataiku API Error Alert"
-        message["From"] = sender
-        message["To"] = sender
+        message = Mail(
+            from_email=os.getenv('SENDER_EMAIL'),
+            to_emails=os.getenv('SENDER_EMAIL'),
+            subject='Dataiku API Error Alert',
+            html_content='<strong>The Dataiku API is not responding. Please check the service.</strong>')
+        try:
+            sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+            #sg.set_sendgrid_data_residency("eu")
 
-        s.sendmail(sender, sender, message.as_string())
-
-        s.quit()
+            response = sg.send(message)
+            print(response.status_code)
+            print(response.body)
+            print(response.headers)
+        except Exception as e2:
+            print(os.getenv('SENDGRID_API_KEY'))
+            print(str(e2))
         raise HTTPException(
             status_code=500, detail=f"Error calling Dataiku API: {str(e)}"
         )
