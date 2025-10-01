@@ -50,9 +50,20 @@ class PatientData(BaseModel):
 
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017")
-client = MongoClient(MONGO_URI)
-db = client["metricsdb"]
-metrics_collection = db["metrics"]
+try:
+    client = MongoClient(MONGO_URI)
+    # Test the connection
+    client.admin.command('ping')
+    db = client["metricsdb"]
+    metrics_collection = db["metrics"]
+    mongo_available = True
+    logging.info("MongoDB connection established successfully")
+except Exception as e:
+    logging.warning(f"MongoDB connection failed: {e}. Metrics will not be stored.")
+    client = None
+    db = None
+    metrics_collection = None
+    mongo_available = False
 
 
 class Metric(BaseModel):
@@ -132,13 +143,18 @@ async def predict_mortality(patient: PatientData):
             status=status, latency=latency, timestamp=datetime.utcnow().timestamp()
         )
         try:
-            metrics_collection.insert_one(metric.dict())
+            if mongo_available and metrics_collection is not None:
+                metrics_collection.insert_one(metric.dict())
+            else:
+                logging.info(f"Metric (not stored): {metric.dict()}")
         except Exception as e:
             print(f"Failed to log metric: {str(e)}")
 
 
 @app.post("/metrics")
 def create_metric(metric: Metric):
+    if not mongo_available or metrics_collection is None:
+        raise HTTPException(status_code=503, detail="Database not available")
     try:
         metrics_collection.insert_one(metric.dict())
         return {"message": "Metric saved"}
@@ -148,6 +164,8 @@ def create_metric(metric: Metric):
 
 @app.get("/metrics")
 def get_metrics():
+    if not mongo_available or metrics_collection is None:
+        return []  # Return empty list if database not available
     try:
         docs = metrics_collection.find().sort("timestamp", -1)
         result = []
