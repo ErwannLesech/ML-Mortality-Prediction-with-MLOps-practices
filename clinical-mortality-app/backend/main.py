@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from datetime import datetime
 
 import httpx
@@ -7,11 +8,18 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pymongo import MongoClient
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 load_dotenv()
+
+# Configuration du logging pour Render
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Clinical Mortality Prediction API")
 
@@ -74,7 +82,7 @@ async def predict_mortality(patient: PatientData):
     """
     Proxy vers l'API Dataiku pour prédire la mortalité
     """
-    logging.info(f"Received prediction request for patient: {patient}")
+    logger.info(f"Received prediction request for patient: {patient}")
     start_time = datetime.utcnow().timestamp()
     status = "success"
     latency = None
@@ -89,6 +97,7 @@ async def predict_mortality(patient: PatientData):
 
         # Appeler l'API Dataiku
         async with httpx.AsyncClient() as client:
+            logger.info(f"Calling Dataiku API with payload: {payload}")
             response = await client.post(
                 os.getenv("DATAIKU_API_URL"),
                 json=payload,
@@ -97,10 +106,13 @@ async def predict_mortality(patient: PatientData):
             )
 
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            logger.info(f"Dataiku API response: {result}")
+            return result
 
     except httpx.HTTPError as e:
         status = "API Error"
+        logger.error(f"Dataiku API error: {str(e)}")
 
         message = Mail(
             from_email=os.getenv("SENDER_EMAIL"),
@@ -116,17 +128,15 @@ async def predict_mortality(patient: PatientData):
             # sg.set_sendgrid_data_residency("eu")
 
             response = sg.send(message)
-            print(response.status_code)
-            print(response.body)
-            print(response.headers)
+            logger.info(f"Email sent successfully: {response.status_code}")
         except Exception as e2:
-            print(os.getenv("SENDGRID_API_KEY"))
-            print(str(e2))
+            logger.error(f"Failed to send email: {str(e2)}")
         raise HTTPException(
             status_code=500, detail=f"Error calling Dataiku API: {str(e)}"
         )
     except Exception as e:
         status = "Internal Server Error"
+        logger.error(f"Internal server error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
     finally:
         latency = datetime.utcnow().timestamp() - start_time
@@ -136,7 +146,7 @@ async def predict_mortality(patient: PatientData):
         try:
             metrics_store.append(metric.dict())
         except Exception as e:
-            print(f"Failed to log metric: {str(e)}")
+            logger.error(f"Failed to log metric: {str(e)}")
 
 
 @app.post("/metrics")
