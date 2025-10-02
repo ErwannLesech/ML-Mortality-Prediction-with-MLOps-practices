@@ -161,7 +161,7 @@ def create_metric(metric: Metric):
 def get_metrics():
     try:
         # Return metrics in reverse chronological order (latest first)
-        metrics_store.sort(key=lambda x: x['timestamp'], reverse=True)
+        metrics_store.sort(key=lambda x: x["timestamp"], reverse=True)
         return metrics_store
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
